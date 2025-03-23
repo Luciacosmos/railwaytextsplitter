@@ -77,6 +77,41 @@
             text-align: center;
             margin-top: 20px;
         }
+        .result-info {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 4px;
+            color: #0d47a1;
+        }
+        .download-link {
+            display: none;
+            margin-top: 15px;
+            text-align: center;
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+        .download-link:hover {
+            background-color: #0b7dda;
+        }
+        .browse-link {
+            display: none;
+            margin-top: 10px;
+            text-align: center;
+            background-color: #9c27b0;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+        .browse-link:hover {
+            background-color: #7b1fa2;
+        }
     </style>
 </head>
 <body>
@@ -103,6 +138,13 @@
         <div id="loading" class="loading">
             <p>正在处理中，请稍候...</p>
         </div>
+
+        <div id="result-info" class="result-info">
+            <p>切割完成！共生成 <span id="file-count">0</span> 个文件。</p>
+        </div>
+
+        <a id="download-link" class="download-link" style="display: none;">下载切割结果</a>
+        <a id="browse-link" class="browse-link" style="display: none;">浏览切割结果</a>
     </div>
 
     <script>
@@ -112,9 +154,16 @@
             const errorAlert = document.getElementById('error-alert');
             const successAlert = document.getElementById('success-alert');
             const loading = document.getElementById('loading');
+            const resultInfo = document.getElementById('result-info');
+            const downloadLink = document.getElementById('download-link');
+            const browseLink = document.getElementById('browse-link');
+            const fileCountSpan = document.getElementById('file-count');
             
             errorAlert.style.display = 'none';
             successAlert.style.display = 'none';
+            resultInfo.style.display = 'none';
+            downloadLink.style.display = 'none';
+            browseLink.style.display = 'none';
             loading.style.display = 'block';
 
             const formData = new FormData();
@@ -128,26 +177,28 @@
                 });
 
                 if (response.ok) {
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    
+                    if (data.message) {
                         // 处理文本太短的情况
-                        const data = await response.json();
                         successAlert.textContent = data.message;
                         successAlert.style.display = 'block';
-                    } else {
-                        // 下载ZIP文件
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'split_result.zip';
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
-                        
-                        successAlert.textContent = '文件切割完成！正在下载...';
+                    } else if (data.success) {
+                        // 处理成功切割的情况
+                        successAlert.textContent = '文件切割完成！';
                         successAlert.style.display = 'block';
+                        
+                        // 显示结果信息
+                        fileCountSpan.textContent = data.file_count;
+                        resultInfo.style.display = 'block';
+                        
+                        // 不再显示下载链接
+                        downloadLink.style.display = 'none';
+                        
+                        // 设置浏览链接
+                        browseLink.href = data.folder_url;
+                        browseLink.textContent = '浏览切割结果';
+                        browseLink.style.display = 'block';
                     }
                 } else {
                     const data = await response.json();

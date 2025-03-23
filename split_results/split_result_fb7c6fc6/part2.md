@@ -1,0 +1,1 @@
+19. Lots of focused anxiety involving the nerves, the mind, the opinions, and whatever Houses are involved. 20. Feel the tension in the Houses outlined by the aspect, internalized for expression through the signs holding the planets. Fit the quindecile analysis into the first impression being developed throughout your list of guidelines for analysis.

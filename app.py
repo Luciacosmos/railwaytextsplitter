@@ -1,11 +1,12 @@
 import os
 import re
-from flask import Flask, request, render_template, send_file, jsonify
+import uuid
+import shutil
+from flask import Flask, request, render_template, send_file, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 import markdown
 from docx import Document
 from io import BytesIO
-import zipfile
 
 # 从splitter.py提取的函数
 def word_count(text):
@@ -48,9 +49,11 @@ def split_text_into_chunks(text, min_words=1100):
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['SPLIT_FOLDER'] = 'split_results'  # 添加切割结果文件夹配置
 
-# 确保上传目录存在
+# 确保上传目录和切割结果目录存在
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['SPLIT_FOLDER'], exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'txt', 'md', 'docx'}
@@ -101,21 +104,63 @@ def upload_file():
         # 切割文本
         chunks = split_text_into_chunks(text, min_words=min_words)
         
-        # 创建ZIP文件
-        memory_file = BytesIO()
-        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for i, chunk in enumerate(chunks, 1):
-                filename = f'part{i}.txt'
-                zf.writestr(filename, chunk)
+        # 创建唯一的文件夹名称
+        folder_id = str(uuid.uuid4())[:8]
+        result_folder_name = f"split_result_{folder_id}"
+        result_folder_path = os.path.join(app.config['SPLIT_FOLDER'], result_folder_name)
+        os.makedirs(result_folder_path, exist_ok=True)
         
-        memory_file.seek(0)
-        return send_file(
-            memory_file,
-            mimetype='application/zip',
-            as_attachment=True,
-            download_name=f'split_result.zip'
-        )
+        # 根据原始文件类型确定输出文件扩展名
+        extension = '.txt'  # 默认为txt
+        if file.filename.endswith('.md'):
+            extension = '.md'  # Markdown文件保持原格式
+        
+        # 将切割后的文本保存到文件夹中
+        file_paths = []
+        for i, chunk in enumerate(chunks, 1):
+            filename = f'part{i}{extension}'
+            file_path = os.path.join(result_folder_path, filename)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(chunk)
+            file_paths.append(filename)
+        
+        # 不再创建ZIP文件
+        
+        # 返回文件夹信息
+        return jsonify({
+            'success': True,
+            'folder_id': folder_id,
+            'file_count': len(file_paths),
+            'files': file_paths,
+            'folder_url': f'/browse/{result_folder_name}'
+        })
     
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# 移除了下载ZIP文件的路由
+
+@app.route('/browse/<folder_name>', methods=['GET'])
+def browse_folder(folder_name):
+    """浏览切割结果文件夹"""
+    try:
+        folder_path = os.path.join(app.config['SPLIT_FOLDER'], folder_name)
+        if not os.path.exists(folder_path):
+            return jsonify({'error': '文件夹不存在'}), 404
+            
+        files = os.listdir(folder_path)
+        files = [f for f in files if os.path.isfile(os.path.join(folder_path, f))]
+        
+        return render_template('browse.html', folder_name=folder_name, files=files)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/file/<folder_name>/<file_name>', methods=['GET'])
+def get_file(folder_name, file_name):
+    """获取切割结果中的单个文件"""
+    try:
+        folder_path = os.path.join(app.config['SPLIT_FOLDER'], folder_name)
+        return send_from_directory(folder_path, file_name)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
