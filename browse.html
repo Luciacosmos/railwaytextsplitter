@@ -116,48 +116,135 @@
     </div>
 
     <script>
-        document.getElementById('download-all-btn').addEventListener('click', async function() {
-            const statusDiv = document.getElementById('download-status');
-            statusDiv.style.display = 'block';
-            statusDiv.textContent = '准备下载所有文件...';
+        document.getElementById('download-all-btn').addEventListener('click', function() {
+            // 创建对话框元素
+            const dialogOverlay = document.createElement('div');
+            dialogOverlay.style.position = 'fixed';
+            dialogOverlay.style.top = '0';
+            dialogOverlay.style.left = '0';
+            dialogOverlay.style.width = '100%';
+            dialogOverlay.style.height = '100%';
+            dialogOverlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+            dialogOverlay.style.display = 'flex';
+            dialogOverlay.style.justifyContent = 'center';
+            dialogOverlay.style.alignItems = 'center';
+            dialogOverlay.style.zIndex = '1000';
             
-            const fileItems = document.querySelectorAll('.file-item');
-            const totalFiles = fileItems.length;
-            let downloadedFiles = 0;
+            const dialogBox = document.createElement('div');
+            dialogBox.style.backgroundColor = 'white';
+            dialogBox.style.padding = '30px';
+            dialogBox.style.borderRadius = '8px';
+            dialogBox.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+            dialogBox.style.width = '400px';
+            dialogBox.style.maxWidth = '90%';
             
-            // 创建一个延迟函数，避免浏览器同时下载太多文件
-            const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+            // 对话框内容
+            const title = document.createElement('h3');
+            title.textContent = '下载文件';
+            title.style.marginTop = '0';
+            title.style.marginBottom = '20px';
+            title.style.textAlign = 'center';
             
-            for (const item of fileItems) {
-                const downloadLink = item.querySelector('.download-btn');
-                const fileName = item.querySelector('.file-name').textContent;
-                
-                // 创建一个临时的a元素来触发下载
-                const tempLink = document.createElement('a');
-                tempLink.href = downloadLink.href;
-                tempLink.download = fileName;
-                tempLink.style.display = 'none';
-                document.body.appendChild(tempLink);
-                
-                // 触发下载
-                tempLink.click();
-                
-                // 移除临时元素
-                document.body.removeChild(tempLink);
-                
-                // 更新状态
-                downloadedFiles++;
-                statusDiv.textContent = `正在下载文件... (${downloadedFiles}/${totalFiles})`;
-                
-                // 每次下载之间添加短暂延迟
-                await delay(500);
-            }
+            const message = document.createElement('p');
+            message.textContent = `您即将下载 ${document.querySelectorAll('.file-item').length} 个文件。请选择下载方式：`;
             
-            statusDiv.textContent = `全部${totalFiles}个文件下载完成！`;
-            setTimeout(() => {
-                statusDiv.textContent += ' 文件已保存到您的默认下载文件夹。';
-            }, 1000);
+            // 创建按钮容器
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.display = 'flex';
+            buttonContainer.style.justifyContent = 'space-between';
+            buttonContainer.style.marginTop = '25px';
+            
+            // 取消按钮
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = '取消';
+            cancelButton.style.padding = '8px 15px';
+            cancelButton.style.border = '1px solid #ddd';
+            cancelButton.style.borderRadius = '4px';
+            cancelButton.style.backgroundColor = '#f5f5f5';
+            cancelButton.style.cursor = 'pointer';
+            
+            // 下载按钮
+            const downloadButton = document.createElement('button');
+            downloadButton.textContent = '开始下载';
+            downloadButton.style.padding = '8px 15px';
+            downloadButton.style.border = 'none';
+            downloadButton.style.borderRadius = '4px';
+            downloadButton.style.backgroundColor = '#2196F3';
+            downloadButton.style.color = 'white';
+            downloadButton.style.cursor = 'pointer';
+            
+            // 添加元素到对话框
+            dialogBox.appendChild(title);
+            dialogBox.appendChild(message);
+            
+            // 添加提示信息
+            const tipInfo = document.createElement('p');
+            tipInfo.textContent = '文件将保存到您的默认下载位置，您可以在浏览器的下载管理器中查看和更改保存位置。';
+            tipInfo.style.fontSize = '14px';
+            tipInfo.style.color = '#666';
+            tipInfo.style.marginTop = '15px';
+            dialogBox.appendChild(tipInfo);
+            
+            buttonContainer.appendChild(cancelButton);
+            buttonContainer.appendChild(downloadButton);
+            dialogBox.appendChild(buttonContainer);
+            
+            dialogOverlay.appendChild(dialogBox);
+            document.body.appendChild(dialogOverlay);
+            
+            // 取消按钮事件
+            cancelButton.addEventListener('click', function() {
+                document.body.removeChild(dialogOverlay);
+            });
+            
+            // 下载按钮事件
+            downloadButton.addEventListener('click', async function() {
+                // 移除对话框
+                document.body.removeChild(dialogOverlay);
+                
+                const statusDiv = document.getElementById('download-status');
+                statusDiv.style.display = 'block';
+                statusDiv.textContent = '准备下载所有文件...';
+                
+                const fileItems = document.querySelectorAll('.file-item');
+                const totalFiles = fileItems.length;
+                let downloadedFiles = 0;
+                
+                // 创建一个延迟函数，避免浏览器同时下载太多文件
+                const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+                
+                for (const item of fileItems) {
+                    const downloadLink = item.querySelector('.download-btn');
+                    const fileName = item.querySelector('.file-name').textContent;
+                    
+                    // 创建一个临时的a元素来触发下载
+                    const tempLink = document.createElement('a');
+                    tempLink.href = downloadLink.href;
+                    tempLink.download = fileName;
+                    tempLink.style.display = 'none';
+                    document.body.appendChild(tempLink);
+                    
+                    // 触发下载
+                    tempLink.click();
+                    
+                    // 移除临时元素
+                    document.body.removeChild(tempLink);
+                    
+                    // 更新状态
+                    downloadedFiles++;
+                    statusDiv.textContent = `正在下载文件... (${downloadedFiles}/${totalFiles})`;
+                    
+                    // 每次下载之间添加短暂延迟
+                    await delay(500);
+                }
+                
+                statusDiv.textContent = `全部${totalFiles}个文件下载完成！`;
+                setTimeout(() => {
+                    statusDiv.textContent += ' 文件已保存到您的下载文件夹。';
+                }, 1000);
+            });
         });
+    </script>
     </script>
 </body>
 </html>
