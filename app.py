@@ -1,11 +1,49 @@
 import os
+import re
 from flask import Flask, request, render_template, send_file, jsonify
 from werkzeug.utils import secure_filename
 import markdown
 from docx import Document
 from io import BytesIO
 import zipfile
-from splitter import split_text_into_chunks, word_count
+
+# 从splitter.py提取的函数
+def word_count(text):
+    """计算文本中的单词数"""
+    return len(text.split())
+
+def split_text_into_chunks(text, min_words=1100):
+    """
+    将文本切割成多个片段，每个片段包含至少 min_words 个单词，并且以标点符号结束。
+    :param text: 要切割的完整文本
+    :param min_words: 每个片段的最小单词数
+    :return: 切割后的文本片段列表
+    """
+    # 使用正则表达式将文本大致分割成句子
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+
+    chunks = []
+    current_chunk = ""
+    current_word_count = 0
+
+    for sentence in sentences:
+        sentence_word_count = word_count(sentence)
+
+        if current_word_count + sentence_word_count < min_words:
+            current_chunk += sentence + " "
+            current_word_count += sentence_word_count
+        else:
+            # 如果添加当前句子后达到或超过min_words，则结束当前片段
+            current_chunk += sentence
+            chunks.append(current_chunk.strip())
+            current_chunk = ""
+            current_word_count = 0
+
+    # 若最后还有剩余文字（即使没达到 min_words），也作为一个片段
+    if current_chunk.strip():
+        chunks.append(current_chunk.strip())
+
+    return chunks
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
