@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件浏览 - 文本切割工具</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .file-list {
+            margin-top: 20px;
+        }
+        .file-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        .file-name {
+            font-size: 16px;
+            color: #333;
+        }
+        .download-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .download-btn:hover {
+            background-color: #45a049;
+        }
+        .back-link {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            color: #666;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .download-all {
+            display: block;
+            margin: 20px auto;
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            width: 200px;
+        }
+        .download-all:hover {
+            background-color: #0b7dda;
+        }
+        #download-status {
+            margin-top: 10px;
+            text-align: center;
+            color: #666;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>文件浏览</h1>
+        
+        <p>切割结果已保存到以下文件中，您可以单独查看或下载每个文件：</p>
+        <div class="path-tip">
+            <i class="fas fa-info-circle"></i>
+            下载时请在浏览器弹窗中选择保存位置（建议使用统一文件夹管理）
+        </div>
+        
+        <div class="file-list">
+            {% for file in files %}
+            <div class="file-item">
+                <span class="file-name">{{ file }}</span>
+                <a href="/file/{{ folder_name }}/{{ file }}" class="download-btn" download>下载</a>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <button id="download-all-btn" class="download-all">全部下载</button>
+        <div id="download-status"></div>
+        <p class="browser-tip">
+            提示：在浏览器设置中可指定默认下载目录（Chrome：设置→下载→保存位置）
+        </p>
+        
+        <a href="/" class="back-link">返回首页</a>
+    </div>
+
+    <script>
+        document.getElementById('download-all-btn').addEventListener('click', async function() {
+            const statusDiv = document.getElementById('download-status');
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = '准备下载所有文件...';
+            
+            const fileItems = document.querySelectorAll('.file-item');
+            const totalFiles = fileItems.length;
+            let downloadedFiles = 0;
+            
+            // 创建一个延迟函数，避免浏览器同时下载太多文件
+            const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+            
+            for (const item of fileItems) {
+                const downloadLink = item.querySelector('.download-btn');
+                const fileName = item.querySelector('.file-name').textContent;
+                
+                // 创建一个临时的a元素来触发下载
+                const tempLink = document.createElement('a');
+                tempLink.href = downloadLink.href;
+                tempLink.download = fileName;
+                tempLink.style.display = 'none';
+                document.body.appendChild(tempLink);
+                
+                // 触发下载
+                tempLink.click();
+                
+                // 移除临时元素
+                document.body.removeChild(tempLink);
+                
+                // 更新状态
+                downloadedFiles++;
+                statusDiv.textContent = `正在下载文件... (${downloadedFiles}/${totalFiles})`;
+                
+                // 每次下载之间添加短暂延迟
+                await delay(500);
+            }
+            
+            statusDiv.textContent = `全部${totalFiles}个文件下载完成！`;
+            setTimeout(() => {
+                statusDiv.textContent += ' 文件已保存到您的默认下载文件夹。';
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
